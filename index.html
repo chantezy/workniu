@@ -19,6 +19,42 @@ button{font-family:inherit;border:none;background:none;cursor:pointer;color:inhe
 input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 13px;background:#fff;outline:none;width:100%}
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a8a93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+input[type=date]{-webkit-appearance:none;appearance:none;min-height:41px}
+input[type=date]::-webkit-calendar-picker-indicator{opacity:.45;cursor:pointer;transition:.15s}
+input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:.9}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+/* 自绘日期输入 + 日历面板（替代原生 date picker） */
+input.dinput{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a8a93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='3'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer;min-height:41px}
+.dp{position:fixed;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 32px rgba(16,16,24,.13);padding:14px;width:264px;z-index:120;display:none;user-select:none}
+.dp.show{display:block}
+.dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.dp-title{font-size:13.5px;font-weight:600}
+.dp-nav{display:flex;gap:2px}
+.dp-nav button{width:26px;height:26px;border-radius:8px;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:.15s}
+.dp-nav button:hover{background:#EFEFF3;color:var(--ink)}
+.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
+.dp-wd{font-size:11px;color:var(--faint);text-align:center;padding:3px 0 5px}
+.dp-day{height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:8px;cursor:pointer;font-variant-numeric:tabular-nums;transition:background .12s}
+.dp-day:hover{background:#EFEFF3}
+.dp-day.dim{color:#c6c6cf}
+.dp-day.today{box-shadow:inset 0 0 0 1px #dcdce2}
+.dp-day.sel{background:var(--accent);color:#fff;font-weight:600}
+.dp-foot{display:flex;justify-content:space-between;margin-top:8px}
+.dp-foot button{font-size:13px;color:var(--muted);padding:4px 8px;border-radius:8px;transition:.15s}
+.dp-foot button:hover{background:#EFEFF3;color:var(--ink)}
+/* 自定义下拉：替代原生 select 展开态 */
+.sel{position:relative;width:100%}
+.sel-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px 13px;background:#fff;font-size:14px;color:var(--ink);text-align:left;transition:border-color .15s}
+.sel-btn:hover{border-color:#dcdce2}
+.sel.open .sel-btn{border-color:var(--accent)}
+.sel-btn .chev{flex:none;color:var(--muted);display:inline-flex;transition:transform .2s}
+.sel.open .sel-btn .chev{transform:rotate(180deg)}
+.sel-menu{position:fixed;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 32px rgba(16,16,24,.13);padding:5px;z-index:70;display:none}
+.sel.open .sel-menu{display:block}
+.sel-opt{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:9px;font-size:14px;cursor:pointer;color:var(--ink);transition:background .12s}
+.sel-opt:hover{background:#EFEFF3}
+.sel-opt.on{font-weight:600}
+.sel-opt .tick{color:var(--ink);display:inline-flex}
 ::placeholder{color:#c6c6cf}
 .ic{display:inline-flex;vertical-align:-3px;flex:none}
 .ic svg{display:block}
@@ -716,11 +752,12 @@ function openTaskModal(t,quad){
   drawTaskModal();
 }
 function drawTaskModal(){
+  if($("#tk-title")){taskDraft.title=$("#tk-title").value;taskDraft.note=$("#tk-note").value;taskDraft.due=$("#tk-due").value;}
   const t=taskDraft;
   openModal(`<h3>${ic("edit",16)} 任务 ${modalX()}</h3>
     <div class="form-row"><label>标题 *</label><input id="tk-title" maxlength="50" value="${escapeHtml(t.title)}" placeholder="要干啥？"></div>
     <div class="form-row"><label>备注</label><textarea id="tk-note" rows="2" placeholder="补充信息（可选）">${escapeHtml(t.note||"")}</textarea></div>
-    <div class="form-row"><label>截止时间</label><input id="tk-due" type="datetime-local" value="${t.due||""}"></div>
+    <div class="form-row"><label>截止日期</label><input id="tk-due" type="text" class="dinput" readonly placeholder="选个日期" value="${t.due?t.due.slice(0,10):""}"></div>
     <div class="form-row"><label>图片附件</label>
       <div class="img-list" id="tk-imgs">${t.images.map((src,i)=>`
         <div class="img-cell"><img src="${src}"><button class="rm" data-i="${i}">${ic("x",10)}</button></div>`).join("")}
@@ -755,11 +792,13 @@ function drawTaskModal(){
     addBtn.addEventListener("drop",e=>{e.preventDefault();handleTaskFiles(e.dataTransfer.files);});
   }
   $("#tk-file").onchange=e=>{handleTaskFiles(e.target.files);e.target.value="";};
+  $("#tk-due").onclick=e=>{e.stopPropagation();openDatePicker(e.target);};
   modal.querySelectorAll(".rm").forEach(b=>b.onclick=()=>{taskDraft.images.splice(parseInt(b.dataset.i),1);drawTaskModal();});
 }
 document.addEventListener("paste",e=>{
   if(!overlay.classList.contains("show")||!taskDraft)return;
-  if($("#tk-img-add"))handleTaskFiles(e.clipboardData.files);
+  const files=e.clipboardData&&e.clipboardData.files?[...e.clipboardData.files].filter(f=>f.type.startsWith("image/")):[];
+  if(files.length){e.preventDefault();handleTaskFiles(files);}
 });
 function handleTaskFiles(files){
   if(!files||!files.length)return;
@@ -899,6 +938,52 @@ function updatePip(txt,btn,mode){
 }
 window.addEventListener("pagehide",()=>{if(pipWin)pipWin.close();});
 
+/* ================= 自绘日期选择器 ================= */
+let dpTarget=null,dpCur=null;
+(function initDatePicker(){
+  const dp=document.createElement("div");
+  dp.className="dp";dp.id="dp";
+  dp.innerHTML=`<div class="dp-head"><span class="dp-title" id="dp-title"></span><span class="dp-nav"><button type="button" id="dp-prev" title="上个月"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><button type="button" id="dp-next" title="下个月"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></span></div><div class="dp-grid" id="dp-grid"></div><div class="dp-foot"><button type="button" id="dp-clear">清除</button><button type="button" id="dp-today">今天</button></div>`;
+  document.body.appendChild(dp);
+  dp.addEventListener("click",e=>e.stopPropagation());
+  $("#dp-prev").onclick=()=>{dpCur.setMonth(dpCur.getMonth()-1);drawDatePicker();};
+  $("#dp-next").onclick=()=>{dpCur.setMonth(dpCur.getMonth()+1);drawDatePicker();};
+  $("#dp-clear").onclick=()=>{if(dpTarget){dpTarget.value="";dpTarget.dispatchEvent(new Event("change"));}closeDatePicker();};
+  $("#dp-today").onclick=()=>{if(dpTarget){dpTarget.value=todayStr();dpTarget.dispatchEvent(new Event("change"));}closeDatePicker();};
+  $("#dp-grid").addEventListener("click",e=>{
+    const cell=e.target.closest(".dp-day");if(!cell||!dpTarget)return;
+    dpTarget.value=cell.dataset.d;
+    dpTarget.dispatchEvent(new Event("change"));
+    closeDatePicker();
+  });
+  document.addEventListener("click",closeDatePicker);
+})();
+function openDatePicker(input){
+  if(window._cdSelClose)window._cdSelClose();
+  dpTarget=input;
+  const p=input.value?input.value.split("-").map(Number):null;
+  dpCur=p&&p.length===3?new Date(p[0],p[1]-1,1):new Date();
+  const r=input.getBoundingClientRect(),dp=$("#dp");
+  dp.style.left=Math.max(8,Math.min(r.left,window.innerWidth-276))+"px";
+  dp.style.top=(r.bottom+6)+"px";
+  dp.classList.add("show");
+  drawDatePicker();
+}
+function closeDatePicker(){$("#dp").classList.remove("show");dpTarget=null;}
+function drawDatePicker(){
+  const y=dpCur.getFullYear(),m=dpCur.getMonth();
+  $("#dp-title").textContent=y+"年"+(m+1)+"月";
+  const sel=dpTarget?dpTarget.value:"",tds=todayStr();
+  const start=new Date(y,m,1-new Date(y,m,1).getDay());
+  let html=["日","一","二","三","四","五","六"].map(w=>`<div class="dp-wd">${w}</div>`).join("");
+  for(let i=0;i<42;i++){
+    const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
+    const ds=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    html+=`<div class="dp-day${d.getMonth()!==m?" dim":""}${ds===sel?" sel":""}${ds===tds?" today":""}" data-d="${ds}">${d.getDate()}</div>`;
+  }
+  $("#dp-grid").innerHTML=html;
+}
+
 /* ================= 倒数日 ================= */
 const WEEK_CN="日一二三四五六";
 function nextOccurrence(cd){
@@ -941,20 +1026,46 @@ function openCdModal(cd){
   cd=cd?{...cd}:{id:uid(),name:"",date:todayStr(),repeat:"once"};
   openModal(`<h3>${ic("calendar",16)} ${isNew?"新建倒数日":"编辑"} ${modalX()}</h3>
     <div class="form-row"><label>名称</label><input id="cd-nm" maxlength="10" value="${escapeHtml(cd.name)}" placeholder="比如：周末、项目上线"></div>
-    <div class="form-row"><label>日期</label><input id="cd-date" type="date" value="${cd.date}"></div>
-    <div class="form-row"><label>重复</label><select id="cd-repeat"></select></div>
+    <div class="form-row"><label>日期</label><input id="cd-date" type="text" class="dinput" readonly value="${cd.date}"></div>
+    <div class="form-row"><label>重复</label>
+      <div class="sel" id="cd-rep-sel">
+        <button type="button" class="sel-btn" id="cd-rep-btn"><span id="cd-rep-txt"></span><span class="chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="sel-menu" id="cd-rep-menu"></div>
+      </div>
+    </div>
     <div class="modal-foot">
       ${isNew?"":`<button class="btn ghost danger-link" id="cd-del">${ic("trash",13)} 删除</button>`}
       <button class="btn ghost" id="cdc-cancel">取消</button>
       <button class="btn" id="cdc-ok">保存</button>
     </div>`);
-  const sel=$("#cd-repeat");
-  const fillOptions=()=>{
+  const selWrap=$("#cd-rep-sel"),selBtn=$("#cd-rep-btn"),selMenu=$("#cd-rep-menu");
+  let repVal=cd.repeat;
+  const drawRep=()=>{
     const dv=$("#cd-date").value||todayStr();
-    sel.innerHTML=["once","day","week","month","year"].map(r=>`<option value="${r}" ${cd.repeat===r?"selected":""}>${repeatLabel(r,dv)}</option>`).join("");
+    $("#cd-rep-txt").textContent=repeatLabel(repVal,dv);
+    selMenu.innerHTML=["once","day","week","month","year"].map(r=>`<div class="sel-opt${r===repVal?" on":""}" data-r="${r}"><span>${repeatLabel(r,dv)}</span>${r===repVal?ic("check",14):""}</div>`).join("");
   };
-  fillOptions();
-  $("#cd-date").addEventListener("change",()=>{cd.repeat=sel.value;fillOptions();});
+  drawRep();
+  window._cdSelClose=()=>selWrap.classList.remove("open");
+  selBtn.onclick=e=>{
+    e.stopPropagation();
+    closeDatePicker();
+    const opening=!selWrap.classList.contains("open");
+    if(opening){
+      const r=selBtn.getBoundingClientRect();
+      selMenu.style.top=(r.bottom+6)+"px";selMenu.style.left=r.left+"px";selMenu.style.width=r.width+"px";
+      selWrap.classList.add("open");
+    }else selWrap.classList.remove("open");
+  };
+  selMenu.onclick=e=>{
+    const opt=e.target.closest(".sel-opt");if(!opt)return;
+    repVal=opt.dataset.r;cd.repeat=repVal;drawRep();selWrap.classList.remove("open");
+  };
+  selMenu.addEventListener("click",e=>e.stopPropagation());
+  $("#cd-date").addEventListener("click",e=>{e.stopPropagation();openDatePicker(e.target);});
+  $("#cd-date").addEventListener("change",()=>drawRep());
+  modal.addEventListener("scroll",()=>selWrap.classList.remove("open"),{passive:true});
+  document.addEventListener("click",()=>selWrap.classList.remove("open"));
   $("#cdc-cancel").onclick=closeModal;
   const del=$("#cd-del");
   if(del)del.onclick=()=>uiConfirm(`删除「${escapeHtml(cd.name)}」？`,()=>{
@@ -965,7 +1076,7 @@ function openCdModal(cd){
   $("#cdc-ok").onclick=()=>{
     const nm=$("#cd-nm").value.trim(),date=$("#cd-date").value;
     if(!nm||!date){toast("名称和日期都要填");return;}
-    cd.name=nm;cd.date=date;cd.repeat=$("#cd-repeat").value;
+    cd.name=nm;cd.date=date;cd.repeat=repVal;
     if(isNew)state.countdowns.push(cd);
     const i=state.countdowns.findIndex(x=>x.id===cd.id);if(i>=0)state.countdowns[i]=cd;
     save();renderCountdown();closeModal();
