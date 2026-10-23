@@ -1739,7 +1739,7 @@ function isoWeek(d){
 }
 function renderDate(){
   const d=new Date();
-  const day=Math.ceil((d-new Date(d.getFullYear(),0,0))/86400000);
+  const day=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-new Date(d.getFullYear(),0,1))/86400000)+1;
   $("#date-chip").textContent=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} 周${WEEK_CN[d.getDay()]} · 第${day}天 · 第${isoWeek(d)}周`;
 }
 hydrateIcons();
