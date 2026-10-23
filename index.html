@@ -320,6 +320,13 @@ header{display:flex;align-items:center;padding:2px 2px 14px;position:relative;fl
 .menu .sw{justify-content:space-between}
 .menu .sw .tgl{transform:scale(.82);margin:-2px -3px -2px 0}
 .menu .mk-size{margin-left:auto;padding-left:12px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums}
+/* 数据安全二级页 */
+.safe-row{display:flex;align-items:center;gap:11px;padding:12px 13px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;transition:.15s;color:var(--ink)}
+.safe-row:hover{border-color:#c9c9d1;background:#fafafa}
+.safe-row .sf-nm{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1;font-size:13.5px;font-weight:600}
+.safe-row .sf-nm small{font-size:11.5px;color:var(--muted);font-weight:400}
+.safe-row>span.ic:last-child{color:var(--faint)}
+.safe-row .mk-size{margin:0 2px 0 auto;font-size:11.5px}
 
 /* ===== 菜单 & Toast ===== */
 .menu{position:absolute;right:26px;top:52px;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:0 12px 32px rgba(0,0,0,.1);padding:5px;display:none;min-width:190px;z-index:60}
@@ -408,11 +415,10 @@ header{display:flex;align-items:center;padding:2px 2px 14px;position:relative;fl
     </div>
   </header>
   <div class="menu" id="menu">
-    <button id="m-export"><span class="ic" data-ic="download"></span>导出数据</button>
-    <button id="m-import"><span class="ic" data-ic="upload"></span>导入数据</button>
     <button id="m-done"><span class="ic" data-ic="check"></span>已完成任务</button>
     <button id="m-order"><span class="ic" data-ic="sliders"></span>模块排序</button>
     <button id="m-hide" class="sw"><span class="ic" data-ic="eyeOff"></span>完成后自动隐藏<span class="tgl"><input type="checkbox" id="mk-hide"><i></i></span></button>
+    <button id="m-safe"><span class="ic" data-ic="save"></span>数据安全</button>
     <button id="m-store"><span class="ic" data-ic="broom"></span>清空图片缓存<span class="mk-size" id="mk-size"></span></button>
   </div>
 
@@ -527,6 +533,7 @@ const ICONS={
   chevDown:'<path d="M6 9l6 6 6-6"/>',
   chevLeft:'<path d="M15 18l-6-6 6-6"/>',
   chevRight:'<path d="M9 6l6 6-6 6"/>',
+  save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
 };
 function ic(name,size=16){
   const stroke=ICONS[name]||ICONS.sparkle;
@@ -606,7 +613,7 @@ function load(){
   }catch(e){return structuredClone(DEFAULT);}
 }
 let saveTimer=null;
-function saveNow(){clearTimeout(saveTimer);try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){toast("保存失败，浏览器存储可能已满")}}
+function saveNow(){clearTimeout(saveTimer);try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){toast("保存失败，浏览器存储可能已满")}writeBackup();}
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,150);}
 const $=s=>document.querySelector(s);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -616,8 +623,8 @@ function toast(msg,ms=2200){const t=$("#toast");t.textContent=msg;t.classList.ad
 
 /* ================= 弹窗 ================= */
 const overlay=$("#overlay"),modal=$("#modal");
-function openModal(html){modal.innerHTML=html;overlay.classList.add("show");}
-function closeModal(){overlay.classList.remove("show");modal.innerHTML="";}
+function openModal(html){modal.innerHTML=html;overlay.classList.add("show");document.body.style.overflow="hidden";}
+function closeModal(){overlay.classList.remove("show");modal.innerHTML="";document.body.style.overflow="";}
 function modalX(){return `<button class="modal-x" onclick="closeModal()">${ic("x",15)}</button>`;}
 function uiConfirm(msg,onOk){
   openModal(`<h3>${ic("trash",17)} 确认操作 ${modalX()}</h3><p style="color:var(--muted);font-size:13px">${msg}</p>
@@ -1044,36 +1051,32 @@ function updatePomodoro(force){
   const ratio=r.mode==="focus"?1-remain/total:remain/total;
   $("#pomo-ring").style.strokeDashoffset=RING*(1-Math.max(0,Math.min(1,ratio)));
   document.title=txt+" · WorkNiu打工牛马工作台";
-  updatePip(txt,r.paused?"继续":"暂停",r.mode==="focus"?"专注":"休息");
+  updatePip(txt,r.mode==="focus"?"专注":"休息");
 }
 
-/* ---- 画中画小组件 ---- */
+/* ---- 画中画小组件（系统级，应用外可见） ---- */
 let pipWin=null;
 $("#pip-btn").onclick=async()=>{
   if(!("documentPictureInPicture" in window)){toast("当前浏览器不支持画中画，倒计时已同步到标签页标题，切走也能看");return;}
   if(pipWin){pipWin.close();pipWin=null;return;}
   try{
-    pipWin=await documentPictureInPicture.requestWindow({width:250,height:200});
+    pipWin=await documentPictureInPicture.requestWindow({width:250,height:180});
     pipWin.document.body.innerHTML=`
     <style>
       body{margin:0;font-family:-apple-system,"PingFang SC",sans-serif;background:#1a1a1e;color:#fff;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-      #t{font-size:44px;font-weight:800;font-variant-numeric:tabular-nums}
+      #t{font-size:46px;font-weight:800;font-variant-numeric:tabular-nums}
       #m{font-size:12px;color:#9a9aa2}
-      button{border:none;border-radius:10px;padding:7px 22px;font-size:13px;font-weight:600;cursor:pointer;background:#fff;color:#111}
     </style>
-    <div id="t">--:--</div><div id="m">专注中</div><button id="b">暂停</button>`;
-    pipWin.document.getElementById("b").onclick=()=>onPomoStart();
+    <div id="t">--:--</div><div id="m">专注中</div>`;
     pipWin.addEventListener("pagehide",()=>{pipWin=null;});
-    toast("小组件已弹出，切到哪都能看到倒计时");
     updatePomodoro(true);
   }catch(e){toast("画中画打开失败："+e.message);}
 };
-function updatePip(txt,btn,mode){
+function updatePip(txt,mode){
   if(!pipWin)return;
   try{
     pipWin.document.getElementById("t").textContent=txt;
     pipWin.document.getElementById("m").textContent=mode+"中";
-    pipWin.document.getElementById("b").textContent=btn;
   }catch(e){}
 }
 window.addEventListener("pagehide",()=>{if(pipWin)pipWin.close();});
@@ -1348,13 +1351,24 @@ function openCdModal(cd,forceNew){
 const menu=$("#menu");
 $("#menu-btn").onclick=e=>{e.stopPropagation();menu.classList.toggle("show");};
 document.addEventListener("click",()=>menu.classList.remove("show"));
-$("#m-export").onclick=()=>{
+function exportBackupJson(){
   const blob=new Blob([JSON.stringify({schemaVersion:SCHEMA,exportedAt:new Date().toISOString(),data:state},null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);
   a.download="workniu-backup-"+todayStr().replace(/-/g,"")+".json";a.click();
   URL.revokeObjectURL(a.href);toast("已导出备份文件");
-};
-$("#m-import").onclick=()=>$("#import-file").click();
+}
+function updSafeBackup(){const el=$("#sf-backup-state");if(el)el.textContent=fileHandle?(fileHandle.name||"已开启"):"未开启";}
+function openSafePage(){
+  openModal(`<h3>${ic("save",16)} 数据安全 ${modalX()}</h3>
+    <div class="safe-row" id="sf-export"><span class="ic" style="color:var(--muted)">${ic("download",15)}</span><span class="sf-nm">导出备份<small>生成 JSON 文件，包含全部数据</small></span>${ic("chevRight",14)}</div>
+    <div class="safe-row" id="sf-import"><span class="ic" style="color:var(--muted)">${ic("upload",15)}</span><span class="sf-nm">导入数据<small>从备份文件恢复全部数据</small></span>${ic("chevRight",14)}</div>
+    <div class="safe-row" id="sf-backup"><span class="ic" style="color:var(--muted)">${ic("save",15)}</span><span class="sf-nm">本地自动备份<small>绑定本地文件，改动实时写入</small></span><span class="mk-size" id="sf-backup-state">${fileHandle?(fileHandle.name||"已开启"):"未开启"}</span>${ic("chevRight",14)}</div>`);
+  updSafeBackup();
+  $("#sf-export").onclick=exportBackupJson;
+  $("#sf-import").onclick=()=>$("#import-file").click();
+  $("#sf-backup").onclick=backupAction;
+}
+$("#m-safe").onclick=openSafePage;
 $("#import-file").onchange=e=>{
   const f=e.target.files[0];e.target.value="";if(!f)return;
   const rd=new FileReader();
@@ -1374,6 +1388,63 @@ $("#import-file").onchange=e=>{
   rd.readAsText(f);
 };
 $("#m-done").onclick=openDoneModal;
+/* 本地自动备份：绑定一个本地文件，数据变化时实时写入（Chrome/Edge） */
+let fileHandle=null,fileHandlePerm=false,writingBk=false,lastBackupAt="";
+function idbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open("workniu",1);r.onupgradeneeded=()=>r.result.createObjectStore("h");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function idbSet(k,v){const db=await idbOpen();return new Promise((res,rej)=>{const tx=db.transaction("h","readwrite");tx.objectStore("h").put(v,k);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});}
+async function idbGet(k){const db=await idbOpen();return new Promise((res,rej)=>{const tx=db.transaction("h","readonly");const rq=tx.objectStore("h").get(k);rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);});}
+async function idbDel(k){const db=await idbOpen();return new Promise((res,rej)=>{const tx=db.transaction("h","readwrite");tx.objectStore("h").delete(k);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});}
+function updMenuBackup(){const el=$("#mk-backup-state");if(el)el.textContent=fileHandle?(fileHandle.name||"已开启"):"未开启";}(async function initFileBackup(){
+  if(!window.showSaveFilePicker)return;
+  try{
+    const h=await idbGet("backup");
+    if(h){fileHandle=h;fileHandlePerm=(await h.queryPermission({mode:"readwrite"}))==="granted";updMenuBackup();}
+  }catch(e){}
+})();
+async function writeBackup(){
+  if(!fileHandle||writingBk)return;
+  writingBk=true;
+  try{
+    let p=await fileHandle.queryPermission({mode:"readwrite"});
+    if(p!=="granted"){fileHandlePerm=false;return;}
+    const w=await fileHandle.createWritable();
+    await w.write(JSON.stringify({schemaVersion:SCHEMA,exportedAt:new Date().toISOString(),data:state},null,2));
+    await w.close();
+    lastBackupAt=new Date().toLocaleString("zh-CN",{hour12:false});
+  }catch(e){
+    if(e&&e.name==="NotFoundError"){
+      fileHandle=null;fileHandlePerm=false;lastBackupAt="";
+      try{await idbDel("backup");}catch(_){}
+      updSafeBackup();toast("备份文件已被删除，已解除绑定");
+    }
+  }finally{writingBk=false;}
+}
+function backupAction(){
+  if(!window.showSaveFilePicker){toast("当前浏览器不支持，请使用 Chrome 或 Edge");return;}
+  if(fileHandle){
+    fileHandle.getFile().then(f=>{
+      lastBackupAt?toast("备份文件："+f.name+"（上次写入 "+lastBackupAt+"）"):toast("备份文件："+f.name);
+    }).catch(async err=>{
+      if(err&&err.name==="NotAllowedError"){
+        try{
+          const p=await fileHandle.requestPermission({mode:"readwrite"});
+          if(p==="granted"){fileHandlePerm=true;updSafeBackup();toast("已恢复授权，继续自动备份");writeBackup();return;}
+        }catch(e){}
+        toast("需要重新授权才能访问备份文件，请点击重试");
+        return;
+      }
+      fileHandle=null;fileHandlePerm=false;lastBackupAt="";
+      try{await idbDel("backup");}catch(e){}
+      updSafeBackup();toast("备份文件已被删除，已解除绑定");
+    });
+    return;
+  }
+  showSaveFilePicker({suggestedName:"workniu-backup.json",types:[{description:"JSON 备份",accept:{"application/json":[".json"]}}]}).then(async h=>{
+    fileHandle=h;fileHandlePerm=true;
+    await idbSet("backup",h);updSafeBackup();writeBackup();
+    toast("已绑定，此后改动将实时写入 "+h.name);
+  }).catch(()=>{});
+}
 function storageSizeText(){return ((localStorage.getItem(KEY)||"").length*2/1048576).toFixed(2)+"MB";}
 function updMenuSize(){const el=$("#mk-size");if(el)el.textContent=storageSizeText();}
 $("#menu-btn").addEventListener("click",updMenuSize);
