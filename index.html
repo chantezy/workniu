@@ -145,7 +145,14 @@ header{display:flex;align-items:center;padding:2px 2px 14px;position:relative;fl
 .task-side{flex:none;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
 .task-sub{display:flex;align-items:center;gap:6px;margin-top:3px}
 .task-side.overdue{color:var(--danger)}
-.task-side.today{color:#b0731c}
+.task-side.today{color:var(--danger)}
+.due-badge{color:var(--danger);font-size:12.5px;font-weight:700;flex:none;white-space:nowrap}
+.due-cols{display:flex;gap:12px}
+.due-cols .form-row{flex:1;min-width:0}
+.da-wrap{display:flex;align-items:center;gap:6px}
+.da-wrap .da-num{flex:1;min-width:0;text-align:center;min-height:41px;-moz-appearance:textfield}
+.da-wrap .da-num::-webkit-outer-spin-button,.da-wrap .da-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.da-lab{flex:none;font-size:12.5px;color:var(--muted)}
 .task-side .badge-pomo{background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:1px 7px;font-size:11px;display:inline-flex;align-items:center;gap:3px}
 
 /* ===== 人格卡 ===== */
@@ -384,6 +391,7 @@ header{display:flex;align-items:center;padding:2px 2px 14px;position:relative;fl
   .task-title{font-size:15px}
   .task-note{font-size:13.5px}
   .task-side{font-size:13px}
+  .due-badge{font-size:13px}
   .task-side .badge-pomo{font-size:11.5px}
   .p-name{font-size:16.5px}
   .p-intro{font-size:13px}
@@ -608,6 +616,7 @@ function load(){
       if(c.userEdited)return;
       if(c.id==="weekend"){const wd=new Date((c.date||"")+"T00:00:00").getDay();if(isNaN(wd)||wd!==6)c.date=nextSaturday();}
     });
+    if(s.pomo.running&&((!s.pomo.running.paused&&s.pomo.running.endTs<=Date.now())||(s.pomo.running.paused&&(s.pomo.running.remain==null||s.pomo.running.remain<=0))))s.pomo.running=null;
     return s;
   }catch(e){return structuredClone(DEFAULT);}
 }
@@ -810,10 +819,19 @@ function taskSide(t){
   let html="";
   if(t.pomos)html+=`<span class="badge-pomo">${ic("timer",10)}×${t.pomos}</span>`;
   if(t.due){
-    const d=todayStr();
-    if(t.due.slice(0,10)<d)html+=`<span class="task-side overdue">${ic("calendar",11)} 逾期</span>`;
-    else if(t.due.slice(0,10)===d)html+=`<span class="task-side today">${ic("calendar",11)} 今天</span>`;
-    else html+=`<span class="task-side">${ic("calendar",11)} ${t.due.slice(5,10).replace("-","/")}</span>`;
+    const d=todayStr(),due=t.due.slice(0,10);
+    if(due<d)html+=`<span class="task-side overdue">${ic("calendar",11)} 逾期</span>`;
+    else if(due===d)html+=`<span class="task-side today">${ic("calendar",11)} 今天</span>`;
+    else{
+      html+=`<span class="task-side">${ic("calendar",11)} ${t.due.slice(5,10).replace("-","/")}</span>`;
+      if(!t.done){
+        const alert=Math.max(0,parseInt(t.alert)||0);
+        if(alert>0){
+          const days=Math.round((new Date(due)-new Date(d))/86400000);
+          if(days>=1&&days<=alert)html+=`<span class="due-badge">剩余 ${days} 天</span>`;
+        }
+      }
+    }
   }
   return html;
 }
@@ -880,7 +898,7 @@ function escapeHtml(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;",
 let taskDraft=null, taskIsNew=false;
 function openTaskModal(t,quad){
   taskIsNew=!t;
-  taskDraft=t?JSON.parse(JSON.stringify(t)):{id:uid(),title:"",note:"",quad:quad||1,due:"",done:false,doneAt:null,images:[],pomos:0,createdAt:Date.now()};
+  taskDraft=t?JSON.parse(JSON.stringify(t)):{id:uid(),title:"",note:"",quad:quad||1,due:"",alert:0,done:false,doneAt:null,images:[],pomos:0,createdAt:Date.now()};
   drawTaskModal();
 }
 function drawTaskModal(){
@@ -890,7 +908,10 @@ function drawTaskModal(){
   openModal(`<h3>${ic("edit",16)} 任务 ${modalX()}</h3>
     <div class="form-row"><label>标题 *</label><input id="tk-title" maxlength="50" value="${escapeHtml(t.title)}" placeholder="要干啥？"></div>
     <div class="form-row"><label>备注</label><textarea id="tk-note" rows="2" placeholder="补充信息（可选）">${escapeHtml(t.note||"")}</textarea></div>
-    <div class="form-row"><label>截止日期</label><input id="tk-due" type="text" class="dinput" readonly placeholder="选个日期" value="${t.due?t.due.slice(0,10):""}"></div>
+    <div class="due-cols">
+      <div class="form-row"><label>截止日期</label><input id="tk-due" type="text" class="dinput" readonly placeholder="选个日期" value="${t.due?t.due.slice(0,10):""}"></div>
+      <div class="form-row"><label>提前提醒</label><div class="da-wrap"><input id="tk-alert" type="number" min="0" max="999" class="da-num" value="${Math.max(0,parseInt(t.alert)||0)}"><span class="da-lab">天</span></div></div>
+    </div>
     <div class="form-row"><label>图片附件</label>
       <div class="img-list" id="tk-imgs">${t.images.map((src,i)=>`
         <div class="img-cell"><img src="${imgSrc(src)}"><button class="rm" data-i="${i}">${ic("x",10)}</button></div>`).join("")}
@@ -919,6 +940,7 @@ function drawTaskModal(){
     if(!title){toast("标题不能为空");return;}
     const doneNow=tkDoneRow?tkDoneRow.classList.contains("on"):false;
     t.title=title;t.note=$("#tk-note").value.trim();t.due=$("#tk-due").value;
+    t.alert=Math.max(0,parseInt($("#tk-alert")&&$("#tk-alert").value)||0);
     t.done=doneNow;t.doneAt=doneNow?(t.doneAt||todayStr()):null;
     if(t.done&&state.hideDone){t.hideAt=Date.now()+3000;setTimeout(renderQuad,3100);}
     else delete t.hideAt;
