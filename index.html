@@ -841,7 +841,7 @@ function renderQuad(){
             ${t.note?`<div class="task-note">${escapeHtml(t.note)}</div>`:""}
             ${taskSide(t)?`<div class="task-sub">${taskSide(t)}</div>`:""}
           </div>
-          ${t.images&&t.images.length?`<span class="task-thumb"><img src="${t.images[0]}" alt="">${t.images.length>1?`<i>+${t.images.length-1}</i>`:""}</span>`:""}
+          ${t.images&&t.images.length?`<span class="task-thumb"><img src="${imgSrc(t.images[0])}" alt="">${t.images.length>1?`<i>+${t.images.length-1}</i>`:""}</span>`:""}
         </div>`).join(""):""}</div>`;
     grid.appendChild(div);
   });
@@ -894,7 +894,7 @@ function drawTaskModal(){
     <div class="form-row"><label>截止日期</label><input id="tk-due" type="text" class="dinput" readonly placeholder="选个日期" value="${t.due?t.due.slice(0,10):""}"></div>
     <div class="form-row"><label>图片附件</label>
       <div class="img-list" id="tk-imgs">${t.images.map((src,i)=>`
-        <div class="img-cell"><img src="${src}"><button class="rm" data-i="${i}">${ic("x",10)}</button></div>`).join("")}
+        <div class="img-cell"><img src="${imgSrc(src)}"><button class="rm" data-i="${i}">${ic("x",10)}</button></div>`).join("")}
         <div class="img-add" id="tk-img-add">＋ 添加图片</div>
       </div>
       <input type="file" id="tk-file" accept="image/*" style="display:none">
@@ -965,6 +965,24 @@ function compressImage(file,cb){
   };
   img.src=url;
 }
+/* base64 → Blob URL 复用：浏览器按 URL 缓存解码结果，避免每次打开大图重新解码 */
+const blobUrlMap=new Map();
+function imgSrc(du){
+  if(!du)return"";
+  let u=blobUrlMap.get(du);
+  if(!u){
+    try{
+      const mime=du.slice(5,du.indexOf(";"))||"image/jpeg";
+      const bin=atob(du.split(",")[1]);
+      const arr=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+      u=URL.createObjectURL(new Blob([arr],{type:mime}));
+      blobUrlMap.set(du,u);
+    }catch(e){return du;}
+  }
+  return u;
+}
+function releaseBlobUrls(){blobUrlMap.forEach(u=>URL.revokeObjectURL(u));blobUrlMap.clear();}
 
 /* ================= 番茄钟 ================= */
 const RING=302;
@@ -1467,6 +1485,7 @@ $("#m-store").onclick=()=>{
   const mb=(state.tasks.reduce((m,t)=>m+((t.images||[]).reduce((s,x)=>s+x.length,0)),0)*0.75/1048576).toFixed(2);
   uiConfirm(`清空全部 ${n} 张任务图片？文字与记录保留，预计释放约 ${mb}MB`,()=>{
     state.tasks.forEach(t=>t.images=[]);
+    releaseBlobUrls();
     saveNow();renderQuad();updMenuSize();toast("图片缓存已清空");
   });
 };
@@ -1592,7 +1611,7 @@ function openDoneModal(){
 const lightbox=$("#lightbox");
 let lbList=[],lbIdx=0;
 function renderLb(){
-  lightbox.querySelector("img").src=lbList[lbIdx]||"";
+  lightbox.querySelector("img").src=imgSrc(lbList[lbIdx]||"");
   lightbox.querySelector(".lb-count").textContent=(lbIdx+1)+" / "+lbList.length;
   const multi=lbList.length>1;
   lightbox.querySelector(".lb-prev").style.visibility=multi?"visible":"hidden";
