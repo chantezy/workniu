@@ -285,6 +285,41 @@ header{display:flex;align-items:center;padding:2px 2px 14px;position:relative;fl
 .done-item .ck:hover{background:#9a9aa2}
 .done-item .ck:active{transform:scale(.85)}
 .done-date{margin-left:auto;flex:none;font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.done-tools{display:flex;gap:8px;margin-bottom:12px}
+.done-tools input{flex:1;margin:0}
+.done-tools .btn{flex:none;display:inline-flex;align-items:center;gap:5px}
+.done-empty{color:var(--muted);font-size:13px;text-align:center;padding:18px 0}
+.done-item{cursor:pointer;border-radius:8px}
+.done-item:hover{background:#fafafa}
+#dl-list{height:52vh;overflow-y:auto;overscroll-behavior:contain;padding-right:2px}
+.done-item .del{flex:none;color:var(--faint);width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;transition:.15s}
+.done-item .del:hover{color:var(--danger);background:#EFEFF3}
+.done-item .del svg{width:13px;height:13px}
+/* 任务弹窗完成勾选框 */
+.tk-done-row{margin-right:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none}
+.tk-done-row:hover{color:var(--ink)}
+.tk-done-row .ck-box{width:19px;height:19px;border-radius:6px;border:1.5px solid #c6c6cf;background:#fff;color:#fff;display:flex;align-items:center;justify-content:center;transition:.15s;flex:none}
+.tk-done-row.on{color:var(--ink)}
+.tk-done-row.on .ck-box{background:var(--accent);border-color:var(--accent)}
+/* 导出范围单选 */
+.dx-body{min-height:calc(52vh + 47px)}
+.dx-row{display:flex;align-items:center;gap:9px;font-size:14px;cursor:pointer;user-select:none;color:var(--ink);margin-bottom:8px}
+.dx-row input{display:none}
+.dx-row .radio{width:18px;height:18px;border-radius:50%;border:1.5px solid #c6c6cf;flex:none;position:relative;transition:border-color .15s}
+.dx-row input:checked+.radio{border-color:var(--accent)}
+.dx-row input:checked+.radio::after{content:"";position:absolute;inset:3.5px;background:var(--accent);border-radius:50%}
+.dx-range-text{font-size:13px;color:var(--muted);margin:-3px 0 12px 27px;font-variant-numeric:tabular-nums}
+.dx-date-row{display:flex;align-items:center;gap:10px;margin:2px 0 6px}
+.dx-date-row .dinput{flex:1;min-width:0;text-align:center}
+.dx-sep{color:var(--muted);font-size:13px;flex:none}
+.dx-quick{display:flex;gap:16px;margin-top:9px}
+.dx-quick button{color:var(--muted);font-size:13px;padding:2px 2px;border-radius:6px;transition:.15s}
+.dx-quick button:hover{color:var(--ink);background:#EFEFF3}
+.modal.tk-locked .form-row{opacity:.4;pointer-events:none;cursor:default}
+/* 菜单开关行 */
+.menu .sw{justify-content:space-between}
+.menu .sw .tgl{transform:scale(.82);margin:-2px -3px -2px 0}
+.menu .mk-size{margin-left:auto;padding-left:12px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums}
 
 /* ===== 菜单 & Toast ===== */
 .menu{position:absolute;right:26px;top:52px;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:0 12px 32px rgba(0,0,0,.1);padding:5px;display:none;min-width:190px;z-index:60}
@@ -377,6 +412,8 @@ header{display:flex;align-items:center;padding:2px 2px 14px;position:relative;fl
     <button id="m-import"><span class="ic" data-ic="upload"></span>导入数据</button>
     <button id="m-done"><span class="ic" data-ic="check"></span>已完成任务</button>
     <button id="m-order"><span class="ic" data-ic="sliders"></span>模块排序</button>
+    <button id="m-hide" class="sw"><span class="ic" data-ic="eyeOff"></span>完成后自动隐藏<span class="tgl"><input type="checkbox" id="mk-hide"><i></i></span></button>
+    <button id="m-store"><span class="ic" data-ic="broom"></span>清空图片缓存<span class="mk-size" id="mk-size"></span></button>
   </div>
 
   <div class="bento">
@@ -539,7 +576,7 @@ function nextDayOfMonth(day){const n=new Date();const d=new Date(n.getFullYear()
 const DEFAULT={
   schemaVersion:SCHEMA, persona:null,
   salary:{monthly:"",payDays:21.75,start:"09:00",end:"18:00",lunch:true,lunchStart:"12:00",lunchEnd:"13:00",payDay:""},
-  hideMoney:false, itemId:"milk-tea", quote:null, rightOrder:["persona","money","cd","pomo"],
+  hideMoney:false, hideDone:false, itemId:"milk-tea", quote:null, rightOrder:["persona","money","cd","pomo"],
   tasks:[],
   pomo:{focus:25,brk:5,running:null,notifyAsked:false,stats:{date:"",count:0,focusMin:0},total:{count:0,min:0}},
   countdowns:[{id:"weekend",name:"周末",date:nextSaturday(),repeat:"week"}],
@@ -558,6 +595,7 @@ function load(){
     if(!Array.isArray(s.tasks))s.tasks=[];
     s.tasks.forEach(t=>{if(t.done&&!t.doneAt)t.doneAt=todayStr();});
     if(!Array.isArray(s.rightOrder)||s.rightOrder.join()==="persona,money,pomo,cd")s.rightOrder=["persona","money","cd","pomo"];
+    if(typeof s.hideDone!=="boolean")s.hideDone=false;
     if(!s.countdowns.some(c=>c.id==="weekend")&&!s.weekendDeleted)s.countdowns.unshift({id:"weekend",name:"周末",date:nextSaturday(),repeat:"week"});
     s.countdowns=s.countdowns.filter(c=>c.id!=="payday");
     s.countdowns.forEach(c=>{
@@ -773,11 +811,16 @@ function taskSide(t){
   }
   return html;
 }
+function isHiddenTask(t){
+  if(!t.done)return false;
+  if(state.hideDone)return!(t.hideAt&&Date.now()<t.hideAt);
+  return !!(t.doneAt&&t.doneAt!==todayStr());
+}
 function renderQuad(){
   const grid=$("#quad-grid");grid.innerHTML="";
   const today=todayStr();
   QUADS.forEach(({q,name,roman,desc})=>{
-    const list=state.tasks.filter(t=>t.quad===q&&!(t.done&&t.doneAt&&t.doneAt!==today));
+    const list=state.tasks.filter(t=>t.quad===q&&!isHiddenTask(t));
     const div=document.createElement("div");div.className="quad";div.dataset.q=q;
     div.innerHTML=`
       <div class="q-head"><span class="q-roman">${roman}</span><span class="q-name">${name}</span>
@@ -798,7 +841,7 @@ function renderQuad(){
   grid.querySelectorAll(".q-add").forEach(b=>b.onclick=e=>{e.stopPropagation();openTaskModal(null,parseInt(b.dataset.q));});
   grid.querySelectorAll(".task").forEach(el=>{
     const t=state.tasks.find(x=>x.id===el.dataset.id);
-    el.querySelector(".ck").onclick=e=>{e.stopPropagation();t.done=!t.done;t.doneAt=t.done?todayStr():null;save();renderQuad();};
+    el.querySelector(".ck").onclick=e=>{e.stopPropagation();t.done=!t.done;t.doneAt=t.done?todayStr():null;if(t.done&&state.hideDone){t.hideAt=Date.now()+3000;setTimeout(renderQuad,3100);}else delete t.hideAt;save();renderQuad();};
     el.onclick=()=>openTaskModal(t);
     const thumb=el.querySelector(".task-thumb");
     if(thumb)thumb.onclick=e=>{e.stopPropagation();openLightbox(t.images,0);};
@@ -836,6 +879,7 @@ function openTaskModal(t,quad){
 }
 function drawTaskModal(){
   if($("#tk-title")){taskDraft.title=$("#tk-title").value;taskDraft.note=$("#tk-note").value;taskDraft.due=$("#tk-due").value;}
+  if($("#tk-done-row"))taskDraft.done=$("#tk-done-row").classList.contains("on");
   const t=taskDraft;
   openModal(`<h3>${ic("edit",16)} 任务 ${modalX()}</h3>
     <div class="form-row"><label>标题 *</label><input id="tk-title" maxlength="50" value="${escapeHtml(t.title)}" placeholder="要干啥？"></div>
@@ -849,16 +893,29 @@ function drawTaskModal(){
       <input type="file" id="tk-file" accept="image/*" style="display:none">
     </div>
     <div class="modal-foot">
+      ${taskIsNew?"":`<label class="tk-done-row ${t.done?"on":""}" id="tk-done-row"><span class="ck-box">${ic("check",12)}</span>已完成</label>`}
       ${taskIsNew?"":`<button class="btn ghost danger-link" id="tk-del">${ic("trash",13)} 删除</button>`}
       <button class="btn ghost" id="tk-cancel">取消</button>
       <button class="btn" id="tk-ok">${taskIsNew?"添加":"保存"}</button>
     </div>`);
-  $("#tk-title").focus();
+  if(!taskIsNew&&t.done)modal.classList.add("tk-locked");
+  const tkDoneRow=$("#tk-done-row");
+  if(tkDoneRow)tkDoneRow.onclick=()=>{
+    const on=tkDoneRow.classList.toggle("on");
+    taskDraft.done=on;
+    modal.classList.toggle("tk-locked",on);
+  };
+  if(modal.classList.contains("tk-locked"))$("#tk-title").blur();
+  else $("#tk-title").focus();
   $("#tk-cancel").onclick=closeModal;
   $("#tk-ok").onclick=()=>{
     const title=$("#tk-title").value.trim();
     if(!title){toast("标题不能为空");return;}
+    const doneNow=tkDoneRow?tkDoneRow.classList.contains("on"):false;
     t.title=title;t.note=$("#tk-note").value.trim();t.due=$("#tk-due").value;
+    t.done=doneNow;t.doneAt=doneNow?(t.doneAt||todayStr()):null;
+    if(t.done&&state.hideDone){t.hideAt=Date.now()+3000;setTimeout(renderQuad,3100);}
+    else delete t.hideAt;
     const exist=state.tasks.findIndex(x=>x.id===t.id);
     if(exist>=0)state.tasks[exist]=t;else state.tasks.push(t);
     saveNow();renderQuad();closeModal();
@@ -1200,7 +1257,7 @@ function openHolidayPage(){
     const cls=h.end<today?"done":"";
     return`<div class="hol-item ${cls}"><span class="nm">${escapeHtml(h.name)}</span><span class="dt">${h.start} ~ ${h.end}</span><span class="st">${state||badge(h)}</span></div>`;
   };
-  openModal(`<h3><button type="button" class="head-icon-btn" id="hol-back" title="返回" style="margin:0 2px 0 -6px">${ic("chevLeft",15)}</button>${ic("calendar",16)} 法定节假日 ${modalX()}</h3>
+  openModal(`<h3><button type="button" class="head-icon-btn" id="hol-back" title="返回" style="margin:0 2px 0 -6px">${ic("chevLeft",15)}</button>法定节假日 ${modalX()}</h3>
     <p class="hol-desc">开启后会在倒数日显示一张假期胶囊，自动显示最近的一个，结束后切换到下一个。数据源为国务院放假安排，每年 11 月官方公布次年安排后自动更新。</p>
     <div class="hol-switch-row"><span>在倒数日中显示</span><label class="tgl"><input type="checkbox" id="hol-on" ${state.holiday.on?"checked":""}><i></i></label></div>
     ${showUp.length?`<div class="hol-sec-t">未完成（${showUp.length}）</div>${showUp.map(h=>item(h)).join("")}`:""}
@@ -1317,27 +1374,147 @@ $("#import-file").onchange=e=>{
   rd.readAsText(f);
 };
 $("#m-done").onclick=openDoneModal;
+function storageSizeText(){return ((localStorage.getItem(KEY)||"").length*2/1048576).toFixed(2)+"MB";}
+function updMenuSize(){const el=$("#mk-size");if(el)el.textContent=storageSizeText();}
+$("#menu-btn").addEventListener("click",updMenuSize);
+$("#m-hide").addEventListener("click",e=>e.stopPropagation());
+$("#mk-hide").checked=state.hideDone;
+$("#m-hide").onclick=e=>{
+  if(!e.target.closest(".tgl"))return;
+};
+$("#mk-hide").onchange=e=>{
+  state.hideDone=e.target.checked;saveNow();
+  if(state.hideDone){
+    state.tasks.forEach(t=>{if(t.done&&t.doneAt===todayStr())t.hideAt=Date.now()+3000;});
+    setTimeout(renderQuad,3100);
+  }else state.tasks.forEach(t=>delete t.hideAt);
+  renderQuad();
+};
+$("#m-store").onclick=()=>{
+  const n=state.tasks.reduce((m,t)=>m+((t.images&&t.images.length)||0),0);
+  if(!n){toast("没有可清理的图片");return;}
+  const mb=(state.tasks.reduce((m,t)=>m+((t.images||[]).reduce((s,x)=>s+x.length,0)),0)*0.75/1048576).toFixed(2);
+  uiConfirm(`清空全部 ${n} 张任务图片？文字与记录保留，预计释放约 ${mb}MB`,()=>{
+    state.tasks.forEach(t=>t.images=[]);
+    saveNow();renderQuad();updMenuSize();toast("图片缓存已清空");
+  });
+};
+function doneQuery(q){
+  q=(q||"").trim().toLowerCase();
+  return state.tasks.filter(t=>t.done&&(!q||t.title.toLowerCase().includes(q)||(t.note||"").toLowerCase().includes(q)))
+    .sort((a,b)=>(b.doneAt||"").localeCompare(a.doneAt||""));
+}
+function exportDoneCsv(list){
+  const rows=[["标题","备注","象限","创建时间","完成时间"]];
+  (list||doneQuery($("#dl-search")?$("#dl-search").value:"")).forEach(t=>{
+    const qd=QUADS.find(x=>x.q===t.quad);
+    rows.push([t.title,t.note||"",qd?qd.name:"象限"+t.quad,
+      t.createdAt?new Date(t.createdAt).toLocaleString("zh-CN",{hour12:false}):"",t.doneAt||""]);
+  });
+  if(rows.length===1){toast("没有符合条件的任务");return;}
+  const csv="\uFEFF"+rows.map(r=>r.map(c=>"\""+String(c).replace(/"/g,"\"\"")+"\"").join(",")).join("\r\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="workniu-done-"+todayStr().replace(/-/g,"")+".csv";a.click();
+  URL.revokeObjectURL(a.href);
+}
+function openDoneExport(){
+  const list=doneQuery($("#dl-search")?$("#dl-search").value:"");
+  const dates=list.map(t=>t.doneAt).filter(Boolean).sort();
+  const allRange=dates.length?dates[0]+" 至 "+dates[dates.length-1]:"—";
+  openModal(`<h3><button type="button" class="head-icon-btn" id="dx-back" title="返回" style="margin:0 2px 0 -6px">${ic("chevLeft",15)}</button>导出已完成任务 ${modalX()}</h3>
+    <div class="dx-body">
+    <label class="dx-row"><input type="radio" name="dx-scope" value="all" checked><span class="radio"></span>全部</label>
+    <div class="dx-range-text" id="dx-all-text">时间范围：${allRange}（共 ${list.length} 条）</div>
+    <label class="dx-row"><input type="radio" name="dx-scope" value="part"><span class="radio"></span>部分</label>
+    <div id="dx-part" style="display:none">
+      <div class="dx-date-row">
+        <input id="dx-from" type="text" class="dinput" readonly placeholder="开始日期">
+        <span class="dx-sep">至</span>
+        <input id="dx-to" type="text" class="dinput" readonly placeholder="结束日期">
+      </div>
+      <div class="dx-quick">
+        <button type="button" id="dx-lastyear">去年</button>
+        <button type="button" id="dx-thisyear">今年</button>
+      </div>
+    </div>
+    </div>
+    <div class="modal-foot"><button class="btn" id="dx-ok">${ic("download",13)} 导出CSV</button></div>`);
+  modal.querySelectorAll("input[name=dx-scope]").forEach(r=>r.onchange=e=>{
+    $("#dx-part").style.display=e.target.value==="part"?"block":"none";
+    $("#dx-all-text").style.display=e.target.value==="all"?"block":"none";
+  });
+  ["dx-from","dx-to"].forEach(id=>{
+    $("#"+id).addEventListener("click",ev=>{ev.stopPropagation();openDatePicker(ev.target);});
+  });
+  const y=new Date().getFullYear();
+  $("#dx-lastyear").onclick=()=>{$("#dx-from").value=(y-1)+"-01-01";$("#dx-to").value=(y-1)+"-12-31";};
+  $("#dx-thisyear").onclick=()=>{$("#dx-from").value=y+"-01-01";$("#dx-to").value=todayStr();};
+  $("#dx-back").onclick=openDoneModal;
+  $("#dx-ok").onclick=()=>{
+    const scope=modal.querySelector("input[name=dx-scope]:checked").value;
+    if(scope==="part"){
+      const from=$("#dx-from").value,to=$("#dx-to").value;
+      if(!from&&!to){toast("请选择日期范围");return;}
+      if(from&&to&&from>to){toast("日期范围不对");return;}
+      if(from)list=list.filter(t=>t.doneAt&&t.doneAt>=from);
+      if(to)list=list.filter(t=>t.doneAt&&t.doneAt<=to);
+    }
+    closeModal();
+    exportDoneCsv(list);
+  };
+}
 function openDoneModal(){
-  const done=state.tasks.filter(t=>t.done);
-  if(!done.length){closeModal();toast("还没有已完成的任务");return;}
   openModal(`<h3>${ic("check",17)} 已完成任务 ${modalX()}</h3>
-    <div>${done.map(t=>`
+    <div class="done-tools">
+      <input id="dl-search" placeholder="搜索标题或备注">
+      <button class="btn ghost" id="dl-csv">${ic("download",13)} 导出CSV</button>
+    </div>
+    <div id="dl-list"></div>
+    <div class="modal-foot"><button class="btn ghost danger-link" id="dl-clear">${ic("trash",13)} 清空</button><button class="btn ghost" id="dl-close">关闭</button></div>`);
+  const draw=()=>{
+    const done=doneQuery($("#dl-search").value);
+    $("#dl-list").innerHTML=done.length?done.map(t=>`
       <div class="done-item" data-id="${t.id}">
         <div class="ck" title="点击恢复为未完成">${ic("check",10)}</div>
         <div class="task-title">${escapeHtml(t.title)}</div>
         <span class="done-date">${t.doneAt||""}</span>
-      </div>`).join("")}</div>
-    <div class="modal-foot"><button class="btn ghost danger-link" id="dl-clear">${ic("trash",13)} 清空</button><button class="btn ghost" id="dl-close">关闭</button></div>`);
-  modal.querySelectorAll(".done-item .ck").forEach(el=>el.onclick=()=>{
-    const t=state.tasks.find(x=>x.id===el.closest(".done-item").dataset.id);
-    if(!t)return;
-    t.done=false;t.doneAt=null;save();renderQuad();openDoneModal();toast("已恢复");
-  });
+        <button class="del" title="删除">${ic("trash",13)}</button>
+      </div>`).join(""):`<div class="done-empty">${state.tasks.some(t=>t.done)?"没有匹配的任务":"还没有已完成的任务"}</div>`;
+    modal.querySelectorAll(".done-item").forEach(el=>{
+      el.querySelector(".ck").onclick=e=>{
+        e.stopPropagation();
+        const t=state.tasks.find(x=>x.id===el.dataset.id);
+        if(!t)return;
+        t.done=false;t.doneAt=null;delete t.hideAt;saveNow();renderQuad();draw();toast("已恢复");
+      };
+      el.querySelector(".del").onclick=e=>{
+        e.stopPropagation();
+        const t=state.tasks.find(x=>x.id===el.dataset.id);
+        if(!t)return;
+        uiConfirm(`删除「${escapeHtml(t.title)}」？`,()=>{
+          state.tasks=state.tasks.filter(x=>x.id!==t.id);
+          saveNow();renderQuad();draw();toast("已删除");
+        });
+      };
+      el.onclick=()=>{
+        const t=state.tasks.find(x=>x.id===el.dataset.id);
+        if(t)openTaskModal(t);
+      };
+    });
+  };
+  draw();
+  $("#dl-search").oninput=draw;
+  $("#dl-csv").onclick=openDoneExport;
   $("#dl-close").onclick=closeModal;
-  $("#dl-clear").onclick=()=>uiConfirm(`清空全部 ${done.length} 个已完成任务？`,()=>{
-    state.tasks=state.tasks.filter(t=>!t.done);
-    save();renderQuad();closeModal();toast("已清空 "+done.length+" 个任务");
-  });
+  $("#dl-clear").onclick=()=>{
+    const n=state.tasks.filter(t=>t.done).length;
+    if(!n){toast("还没有已完成的任务");return;}
+    uiConfirm(`清空全部 ${n} 个已完成任务？`,()=>{
+      state.tasks=state.tasks.filter(t=>!t.done);
+      saveNow();renderQuad();closeModal();toast("已清空 "+n+" 个任务");
+    });
+  };
 }
 
 /* ================= 看大图 ================= */
