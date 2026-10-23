@@ -542,7 +542,7 @@ const DEFAULT={
   hideMoney:false, itemId:"milk-tea", quote:null, rightOrder:["persona","money","cd","pomo"],
   tasks:[],
   pomo:{focus:25,brk:5,running:null,notifyAsked:false,stats:{date:"",count:0,focusMin:0},total:{count:0,min:0}},
-  countdowns:[{id:"weekend",name:"周末",date:nextSaturday(),repeat:"week"},{id:"payday",name:"发工资",date:nextDayOfMonth(15),repeat:"month"}],
+  countdowns:[{id:"weekend",name:"周末",date:nextSaturday(),repeat:"week"}],
   weekendDeleted:false,
   holiday:{on:true,extra:[],fetched:""},
 };
@@ -559,15 +559,17 @@ function load(){
     s.tasks.forEach(t=>{if(t.done&&!t.doneAt)t.doneAt=todayStr();});
     if(!Array.isArray(s.rightOrder)||s.rightOrder.join()==="persona,money,pomo,cd")s.rightOrder=["persona","money","cd","pomo"];
     if(!s.countdowns.some(c=>c.id==="weekend")&&!s.weekendDeleted)s.countdowns.unshift({id:"weekend",name:"周末",date:nextSaturday(),repeat:"week"});
+    s.countdowns=s.countdowns.filter(c=>c.id!=="payday");
     s.countdowns.forEach(c=>{
+      if(c.userEdited)return;
       if(c.id==="weekend"){const wd=new Date((c.date||"")+"T00:00:00").getDay();if(isNaN(wd)||wd!==6)c.date=nextSaturday();}
-      if(c.id==="payday"){const pdv=parseInt(s.salary.payDay)||parseInt((c.date||"").slice(8,10));const info=paydayInfo(pdv);if(info)c.date=info.date;}
     });
     return s;
   }catch(e){return structuredClone(DEFAULT);}
 }
 let saveTimer=null;
-function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){toast("保存失败，浏览器存储可能已满")}},150);}
+function saveNow(){clearTimeout(saveTimer);try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){toast("保存失败，浏览器存储可能已满")}}
+function save(){clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,150);}
 const $=s=>document.querySelector(s);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const pad=n=>String(n).padStart(2,"0");
@@ -859,7 +861,7 @@ function drawTaskModal(){
     t.title=title;t.note=$("#tk-note").value.trim();t.due=$("#tk-due").value;
     const exist=state.tasks.findIndex(x=>x.id===t.id);
     if(exist>=0)state.tasks[exist]=t;else state.tasks.push(t);
-    save();renderQuad();closeModal();
+    saveNow();renderQuad();closeModal();
     if(taskIsNew)toast("任务已添加");
   };
   const delBtn=$("#tk-del");
@@ -1278,9 +1280,10 @@ function openCdModal(cd,forceNew){
     const nm=$("#cd-nm").value.trim(),date=$("#cd-date").value;
     if(!nm||!date){toast("名称和日期都要填");return;}
     cd.name=nm;cd.date=date;cd.repeat=repVal;
+    if(cd.id==="weekend"||cd.id==="payday")cd.userEdited=true;
     if(isNew)state.countdowns.push(cd);
     const i=state.countdowns.findIndex(x=>x.id===cd.id);if(i>=0)state.countdowns[i]=cd;
-    save();renderCountdown();closeModal();
+    saveNow();renderCountdown();closeModal();
   };
 }
 
