@@ -334,6 +334,7 @@ header{display:flex;align-items:center;padding:2px 2px 14px;position:relative;fl
 .safe-row .sf-nm small{font-size:11.5px;color:var(--muted);font-weight:400}
 .safe-row>span.ic:last-child{color:var(--faint)}
 .safe-row .mk-size{margin:0 2px 0 auto;font-size:11.5px}
+.safe-row .bk-ok{color:#2fa572;display:inline-flex;vertical-align:-2px;margin-right:4px}
 
 /* ===== 菜单 & Toast ===== */
 .menu{position:absolute;right:26px;top:52px;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:0 12px 32px rgba(0,0,0,.1);padding:5px;display:none;min-width:190px;z-index:60}
@@ -1396,7 +1397,8 @@ function exportBackupJson(){
   a.download="workniu-backup-"+todayStr().replace(/-/g,"")+".json";a.click();
   URL.revokeObjectURL(a.href);toast("已导出备份文件");
 }
-function updSafeBackup(){const el=$("#sf-backup-state");if(el)el.textContent=fileHandle?(fileHandle.name||"已开启"):"未开启";}
+function bkStateHtml(){return fileHandle?`<span class="bk-ok">${ic("check",12)}</span>${fileHandle.name||"已开启"}`:"未开启";}
+function updSafeBackup(){const el=$("#sf-backup-state");if(el)el.innerHTML=bkStateHtml();}
 function openSafePage(){
   const imgN=state.tasks.reduce((m,t)=>m+((t.images&&t.images.length)||0),0);
   openSafeModal(imgN);
@@ -1405,7 +1407,7 @@ function openSafeModal(imgN){
   openModal(`<h3>${ic("save",16)} 数据安全 ${modalX()}</h3>
     <div class="safe-row" id="sf-export"><span class="ic" style="color:var(--muted)">${ic("download",15)}</span><span class="sf-nm">导出备份<small>生成 JSON 文件，包含全部数据</small></span>${ic("chevRight",14)}</div>
     <div class="safe-row" id="sf-import"><span class="ic" style="color:var(--muted)">${ic("upload",15)}</span><span class="sf-nm">导入数据<small>从备份文件恢复全部数据</small></span>${ic("chevRight",14)}</div>
-    <div class="safe-row" id="sf-backup"><span class="ic" style="color:var(--muted)">${ic("save",15)}</span><span class="sf-nm">本地自动备份<small>绑定本地文件，改动实时写入</small></span><span class="mk-size" id="sf-backup-state">${fileHandle?(fileHandle.name||"已开启"):"未开启"}</span>${ic("chevRight",14)}</div>
+    <div class="safe-row" id="sf-backup"><span class="ic" style="color:var(--muted)">${ic("save",15)}</span><span class="sf-nm">本地自动备份<small>绑定本地文件，改动实时写入</small></span><span class="mk-size" id="sf-backup-state">${bkStateHtml()}</span>${ic("chevRight",14)}</div>
     <div class="safe-row" id="sf-clearimg"><span class="ic" style="color:var(--muted)">${ic("broom",15)}</span><span class="sf-nm">清空图片<small>仅移除任务图片附件，文字记录保留</small></span><span class="mk-size" id="sf-img-state">${imgN||0} 张</span>${ic("chevRight",14)}</div>
     <div class="safe-row" id="sf-reset"><span class="ic" style="color:var(--danger)">${ic("trash",15)}</span><span class="sf-nm" style="color:var(--danger)">恢复默认<small style="color:var(--faint)">清空全部数据，回到初始状态，不可撤销</small></span><span class="mk-size">${storageSizeText()}</span>${ic("chevRight",14)}</div>`);
   updSafeBackup();
